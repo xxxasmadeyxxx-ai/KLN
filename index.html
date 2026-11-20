@@ -207,6 +207,38 @@
 
     .muted { color: var(--muted); }
     .small { font-size: 0.8rem; }
+
+    .toggle-btn {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 0.82rem;
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    .toggle-btn:hover {
+      border-color: var(--accent);
+      opacity: 1;
+    }
+
+    .collapsible-body[hidden] {
+      display: none;
+    }
+
+    .tle-pre {
+      margin: 10px 0 0;
+      padding: 12px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.78rem;
+      line-height: 1.4;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--muted);
+    }
   </style>
 </head>
 <body>
@@ -254,29 +286,57 @@
 
     <section class="grid-2" id="groupsSummary"></section>
 
-    <section class="card">
-      <div class="card-header">
-        <h2 class="card-title">Найближчі проходи над точкою</h2>
-        <span class="badge green" id="passesCount">0 проходів</span>
+    <section class="card" id="passesSection">
+      <div class="card-header" style="margin-bottom: 0;">
+        <div>
+          <h2 class="card-title">Найближчі проходи над точкою</h2>
+          <div class="small muted">Перелік приховано під спойлером — натисни, щоб відкрити або згорнути</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span class="badge green" id="passesCount">0 проходів</span>
+          <button id="togglePassesBtn" class="toggle-btn" type="button" aria-expanded="false" aria-controls="passesBodyContainer">
+            Показати список
+          </button>
+        </div>
       </div>
-      <div class="small muted" style="margin-bottom: 10px;">
-        Час вказано у локальному часі браузера та UTC. Апарати з епохою старішою за 26323 позначені як «стара епоха» — для точного часу проходу їх варто оновити.
+      <div id="passesBodyContainer" class="collapsible-body" hidden style="margin-top: 12px;">
+        <div class="small muted" style="margin-bottom: 10px;">
+          Час вказано у локальному часі браузера та UTC. Апарати з епохою старішою за 26323 позначені як «стара епоха» — для точного часу проходу їх варто оновити.
+        </div>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Апарат</th>
+                <th>NORAD</th>
+                <th>Група</th>
+                <th>Вхід</th>
+                <th>Кульмінація (макс. кут)</th>
+                <th>Вихід</th>
+                <th>Епоха TLE</th>
+              </tr>
+            </thead>
+            <tbody id="passesBody"></tbody>
+          </table>
+        </div>
       </div>
-      <div style="overflow-x: auto;">
-        <table>
-          <thead>
-            <tr>
-              <th>Апарат</th>
-              <th>NORAD</th>
-              <th>Група</th>
-              <th>Вхід</th>
-              <th>Кульмінація (макс. кут)</th>
-              <th>Вихід</th>
-              <th>Епоха TLE</th>
-            </tr>
-          </thead>
-          <tbody id="passesBody"></tbody>
-        </table>
+    </section>
+
+    <section class="card" id="bottomDetailsSection">
+      <div class="card-header" style="margin-bottom: 0;">
+        <div>
+          <h2 class="card-title">Додаткова інформація та вихідні TLE</h2>
+          <div class="small muted">Згорнуто за замовчуванням для компактного вигляду сторінки</div>
+        </div>
+        <button id="toggleBottomBtn" class="toggle-btn" type="button" aria-expanded="false" aria-controls="bottomDetailsBody">
+          Розгорнути
+        </button>
+      </div>
+      <div id="bottomDetailsBody" class="collapsible-body" hidden style="margin-top: 12px;">
+        <div class="small muted">
+          Точка спостереження: Клинці (52.7528° N, 32.2361° E). Група 1 охоплює сектор RAAN ~98.6°–100.1° (переважно запуск 2026-165), Група 2 — RAAN ~207.5°–215.7° (переважно запуск 2026-061), а третя група об'єднує апарати зі старішими епохами, зміненим темпом або іншою орбітою (RASSVET-2-1).
+        </div>
+        <pre id="rawTleDump" class="tle-pre"></pre>
       </div>
     </section>
   </main>
@@ -509,6 +569,33 @@
 
     document.getElementById("calcBtn").addEventListener("click", computePasses);
     document.getElementById("groupFilter").addEventListener("change", computePasses);
+
+    const togglePassesBtn = document.getElementById("togglePassesBtn");
+    const passesBodyContainer = document.getElementById("passesBodyContainer");
+
+    togglePassesBtn.addEventListener("click", () => {
+      const isExpanded = togglePassesBtn.getAttribute("aria-expanded") === "true";
+      const nextExpanded = !isExpanded;
+      togglePassesBtn.setAttribute("aria-expanded", String(nextExpanded));
+      togglePassesBtn.textContent = nextExpanded ? "Приховати список" : "Показати список";
+      passesBodyContainer.hidden = !nextExpanded;
+    });
+
+    const toggleBottomBtn = document.getElementById("toggleBottomBtn");
+    const bottomDetailsBody = document.getElementById("bottomDetailsBody");
+    const rawTleDump = document.getElementById("rawTleDump");
+
+    rawTleDump.textContent = RAW_TLES.map(
+      (s) => `${s.name} (${s.norad}) [${s.group}]\n${s.line1}\n${s.line2}`
+    ).join("\n\n");
+
+    toggleBottomBtn.addEventListener("click", () => {
+      const isExpanded = toggleBottomBtn.getAttribute("aria-expanded") === "true";
+      const nextExpanded = !isExpanded;
+      toggleBottomBtn.setAttribute("aria-expanded", String(nextExpanded));
+      toggleBottomBtn.textContent = nextExpanded ? "Згорнути" : "Розгорнути";
+      bottomDetailsBody.hidden = !nextExpanded;
+    });
 
     renderGroups();
     computePasses();
